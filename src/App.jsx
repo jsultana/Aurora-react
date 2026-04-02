@@ -283,33 +283,41 @@ if (topTags.length === 1) {
         <div className="settings-card">
           <h3 className="section-title">Settings</h3>
 
-          <div className="settings-grid">
-            <div>
-              <label>
-                Focus (minutes):
-                <input
-                  type="number"
-                  min="1"
-                  value={focusDuration}
-                  onChange={(e) => setFocusDuration(Number(e.target.value))}
-                />
-              </label>
+          <div className="slider-grid">
+            <div className="slider-card">
+              <div className="slider-label-row">
+                <span>Focus duration</span>
+                <strong>{focusDuration} min</strong>
+              </div>
+              <input
+                className="duration-slider"
+                type="range"
+                min="5"
+                max="120"
+                step="5"
+                value={focusDuration}
+                onChange={(e) => setFocusDuration(Number(e.target.value))}
+              />
             </div>
 
-            <div>
-              <label>
-                Break (minutes):
-                <input
-                  type="number"
-                  min="1"
-                  value={breakDuration}
-                  onChange={(e) => setBreakDuration(Number(e.target.value))}
-                />
-              </label>
+            <div className="slider-card">
+              <div className="slider-label-row">
+                <span>Break duration</span>
+                <strong>{breakDuration} min</strong>
+              </div>
+              <input
+                className="duration-slider"
+                type="range"
+                min="5"
+                max="30"
+                step="5"
+                value={breakDuration}
+                onChange={(e) => setBreakDuration(Number(e.target.value))}
+              />
             </div>
           </div>
 
-          <div className="settings-stack">
+          <div className="settings-stack compact-settings-stack">
             <div>
               <h4>Saved Modules</h4>
               <div className="inline-row">
