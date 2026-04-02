@@ -108,73 +108,86 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
   }, [sessions]);
 
   return (
-    <div style={{ maxWidth: "900px", margin: "0 auto", padding: "20px" }}>
-      <h1>Aurora Insights</h1>
+    <div className="app-shell">
+      <div className="page-card insights-layout">
+        <h1>Aurora Insights</h1>
 
-      <div style={{ marginTop: "20px" }}>
-        <h3>Summary</h3>
-        <p>Total focus sessions: {totalFocusSessions}</p>
-        <p>Total focus minutes: {totalFocusMinutes}</p>
-        <p>Most used tag: {mostUsedTag}</p>
-      </div>
-
-      <div style={{ marginTop: "20px" }}>
-        <h3>Minutes per tag</h3>
-        <ul style={{ listStylePosition: "inside", padding: 0, margin: 0 }}>
-          {Object.entries(tagMinutes).map(([tag, minutes]) => (
-            <li key={tag}>
-              {tag}: {minutes} min
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div style={{ marginTop: "20px" }}>
-        <h3>Top Tags</h3>
-        <ul style={{ listStylePosition: "inside", padding: 0, margin: 0 }}>
-          {sortedTags.map(([tag, minutes]) => (
-            <li key={tag}>
-              {tag}: {minutes} min
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div style={{ marginTop: "20px" }}>
-        <h3>Focus Distribution</h3>
-        <ul style={{ listStylePosition: "inside", padding: 0, margin: 0 }}>
-          {tagPercentages.map(({ tag, percentage }) => (
-            <li key={tag}>
-              {tag}: {percentage}%
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div style={{ marginTop: "20px", maxWidth: "280px", marginInline: "auto" }}>
-        <h3>Focus Pie Chart</h3>
-        <div style={{ position: "relative", width: "100%", height: "220px" }}>
-          <canvas ref={pieChartRef}></canvas>
+        <div className="insights-card">
+          <h3 className="section-title">Summary</h3>
+          <div className="stats-grid">
+            <div className="stat-pill">
+              <span className="muted-text">Focus sessions</span>
+              <strong>{totalFocusSessions}</strong>
+            </div>
+            <div className="stat-pill">
+              <span className="muted-text">Focus minutes</span>
+              <strong>{totalFocusMinutes}</strong>
+            </div>
+            <div className="stat-pill">
+              <span className="muted-text">Most used tag</span>
+              <strong>{mostUsedTag}</strong>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div style={{ marginTop: "20px", maxWidth: "420px", marginInline: "auto" }}>
-        <h3>Focus Chart</h3>
-        <div style={{ position: "relative", width: "100%", height: "240px" }}>
-          <canvas ref={chartRef}></canvas>
+        <div className="insights-card">
+          <h3 className="section-title">Minutes per tag</h3>
+          <ul className="list-reset">
+            {Object.entries(tagMinutes).map(([tag, minutes]) => (
+              <li key={tag}>
+                {tag}: {minutes} min
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
 
-      <div style={{ marginTop: "20px" }}>
-        <h3>Session History</h3>
-        <ul style={{ listStylePosition: "inside", padding: 0, margin: 0 }}>
-          {sessions.map((session, index) => (
-            <li key={index}>
-              {session.type.toUpperCase()} ({session.tag || "untitled"}) - {session.duration} min - completed at{" "}
-              {new Date(session.completedAt).toLocaleTimeString()}
-            </li>
-          ))}
-        </ul>
+        <div className="insights-card">
+          <h3 className="section-title">Top Tags</h3>
+          <ul className="list-reset">
+            {sortedTags.map(([tag, minutes]) => (
+              <li key={tag}>
+                {tag}: {minutes} min
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="insights-card">
+          <h3 className="section-title">Focus Distribution</h3>
+          <ul className="list-reset">
+            {tagPercentages.map(({ tag, percentage }) => (
+              <li key={tag}>
+                {tag}: {percentage}%
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="chart-card chart-wrap pie">
+          <h3 className="section-title">Focus Pie Chart</h3>
+          <div className="chart-frame-sm">
+            <canvas ref={pieChartRef}></canvas>
+          </div>
+        </div>
+
+        <div className="chart-card chart-wrap">
+          <h3 className="section-title">Focus Chart</h3>
+          <div className="chart-frame-md">
+            <canvas ref={chartRef}></canvas>
+          </div>
+        </div>
+
+        <div className="history-card">
+          <h3 className="section-title">Session History</h3>
+          <ul className="list-reset">
+            {sessions.map((session, index) => (
+              <li key={index}>
+                {session.type.toUpperCase()} ({session.tag || "untitled"}) - {session.duration} min - completed at{" "}
+                {new Date(session.completedAt).toLocaleTimeString()}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

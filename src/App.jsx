@@ -33,6 +33,10 @@ const [selectedModule, setSelectedModule] = useState("");
 const [view, setView] = useState("timer");
 
 const hasLoggedRef = useRef(false);
+const activeDuration = (mode === "focus" ? focusDuration : breakDuration) * 60;
+const progress = activeDuration > 0 ? timeLeft / activeDuration : 0;
+const circleCircumference = 2 * Math.PI * 100;
+const strokeDashoffset = circleCircumference - progress * circleCircumference;
 
   useEffect(() => {
     if (!isRunning) return;
@@ -167,11 +171,80 @@ if (topTags.length === 1) {
       <div className="page-card">
         <div className="timer-hero">
           <h1 className="timer-title">Aurora</h1>
-          <h2 className="mode-label">{mode === "focus" ? "Focus" : "Break"}</h2>
 
-          <div className="timer-display">
-            {Math.floor(timeLeft / 60)}:
-            {(timeLeft % 60).toString().padStart(2, "0")}
+          <div
+            className="timer-circle-wrap"
+            style={{
+              position: "relative",
+              width: "min(78vw, 320px)",
+              aspectRatio: "1",
+              margin: "8px auto 28px",
+              display: "grid",
+              placeItems: "center"
+            }}
+          >
+            <svg
+              className="timer-ring"
+              viewBox="0 0 240 240"
+              width="320"
+              height="320"
+              aria-hidden="true"
+              style={{ width: "100%", height: "100%", transform: "rotate(-90deg)", overflow: "visible" }}
+            >
+              <defs>
+                <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#c5a6ff" />
+                  <stop offset="100%" stopColor="#ffffff" />
+                </linearGradient>
+              </defs>
+              <circle
+                className="timer-ring-track"
+                cx="120"
+                cy="120"
+                r="100"
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.1)"
+                strokeWidth="10"
+              />
+              <circle
+                className="timer-ring-progress"
+                cx="120"
+                cy="120"
+                r="100"
+                fill="none"
+                stroke="url(#timerGradient)"
+                strokeWidth="10"
+                strokeLinecap="round"
+                style={{
+                  filter: "drop-shadow(0 0 10px rgba(197, 166, 255, 0.5))",
+                  transition: "stroke-dashoffset 0.5s linear",
+                  strokeDasharray: circleCircumference,
+                  strokeDashoffset
+                }}
+              />
+            </svg>
+
+            <div
+              className="timer-center"
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+                textAlign: "center"
+              }}
+            >
+              <div className="timer-display">
+                {Math.floor(timeLeft / 60)}:
+                {(timeLeft % 60).toString().padStart(2, "0")}
+              </div>
+              <h2 className="mode-label timer-mode-inside" style={{ margin: 0, fontSize: "1rem" }}>
+                {mode === "focus" ? "Focus" : "Break"}
+              </h2>
+            </div>
           </div>
 
           <div className="button-row">
