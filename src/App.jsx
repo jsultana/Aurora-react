@@ -1,43 +1,45 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import Insights from "./Insights";
 import "./App.css";
 
 function App() {
-const [focusDuration, setFocusDuration] = useState(() => {
-  return Number(localStorage.getItem("focusDuration")) || 25;
-});
+  const [focusDuration, setFocusDuration] = useState(() => {
+    return Number(localStorage.getItem("focusDuration")) || 25;
+  });
 
-const [breakDuration, setBreakDuration] = useState(() => {
-  return Number(localStorage.getItem("breakDuration")) || 5;
-});
+  const [breakDuration, setBreakDuration] = useState(() => {
+    return Number(localStorage.getItem("breakDuration")) || 5;
+  });
 
-const [timeLeft, setTimeLeft] = useState(() => {
-  const savedFocus = Number(localStorage.getItem("focusDuration")) || 25;
-  return savedFocus * 60;
-});
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const savedFocus = Number(localStorage.getItem("focusDuration")) || 25;
+    return savedFocus * 60;
+  });
 
-const [isRunning, setIsRunning] = useState(false);
-const [mode, setMode] = useState("focus");
+  const [isRunning, setIsRunning] = useState(false);
+  const [mode, setMode] = useState("focus");
 
-const [sessions, setSessions] = useState(() => {
-  return JSON.parse(localStorage.getItem("sessions")) || [];
-});  
+  const [sessions, setSessions] = useState(() => {
+    return JSON.parse(localStorage.getItem("sessions")) || [];
+  });
 
-const [tag, setTag] = useState("");
-const [moduleInput, setModuleInput] = useState("");
-const [savedModules, setSavedModules] = useState(() => {
-  return JSON.parse(localStorage.getItem("savedModules")) || [];
-});
-const [selectedModule, setSelectedModule] = useState("");
+  const [tag, setTag] = useState("");
+  const [moduleInput, setModuleInput] = useState("");
+  const [savedModules, setSavedModules] = useState(() => {
+    return JSON.parse(localStorage.getItem("savedModules")) || [];
+  });
+  const [selectedModule, setSelectedModule] = useState("");
 
-const [view, setView] = useState("timer");
+  const [view, setView] = useState("timer");
 
-const hasLoggedRef = useRef(false);
-const activeDuration = (mode === "focus" ? focusDuration : breakDuration) * 60;
-const progress = activeDuration > 0 ? timeLeft / activeDuration : 0;
-const circleCircumference = 2 * Math.PI * 100;
-const strokeDashoffset = circleCircumference - progress * circleCircumference;
+  const hasLoggedRef = useRef(false);
 
+  const activeDuration = (mode === "focus" ? focusDuration : breakDuration) * 60;
+  const progress = activeDuration > 0 ? timeLeft / activeDuration : 0;
+  const circleCircumference = 2 * Math.PI * 100;
+  const strokeDashoffset = circleCircumference - progress * circleCircumference;
+
+  // Countdown interval
   useEffect(() => {
     if (!isRunning) return;
 
@@ -55,6 +57,7 @@ const strokeDashoffset = circleCircumference - progress * circleCircumference;
     return () => clearInterval(interval);
   }, [isRunning, mode, focusDuration, breakDuration]);
 
+  // Handle timer reaching zero — log session and switch mode
   useEffect(() => {
     if (timeLeft !== 0) return;
 
@@ -70,8 +73,8 @@ const strokeDashoffset = circleCircumference - progress * circleCircumference;
                 .filter(Boolean)
                 .join(" - ")
                 .toLowerCase() || "untitled",
-            completedAt: new Date().toISOString()
-          }
+            completedAt: new Date().toISOString(),
+          },
         ]);
         hasLoggedRef.current = true;
       }
@@ -82,63 +85,77 @@ const strokeDashoffset = circleCircumference - progress * circleCircumference;
       setMode("focus");
       setTimeLeft(focusDuration * 60);
     }
-  }, [timeLeft, mode, focusDuration, breakDuration]);
+  }, [timeLeft, mode, focusDuration, breakDuration, selectedModule, tag]);
 
-// saving focusDuration
+  // Persist settings and sessions
   useEffect(() => {
-  localStorage.setItem("focusDuration", focusDuration);
-}, [focusDuration]);
+    localStorage.setItem("focusDuration", focusDuration);
+  }, [focusDuration]);
 
-// saving breakDuration
-useEffect(() => {
-  localStorage.setItem("breakDuration", breakDuration);
-}, [breakDuration]);
+  useEffect(() => {
+    localStorage.setItem("breakDuration", breakDuration);
+  }, [breakDuration]);
 
-// saving sessions 
-useEffect(() => {
-  localStorage.setItem("sessions", JSON.stringify(sessions));
-}, [sessions]);
+  useEffect(() => {
+    localStorage.setItem("sessions", JSON.stringify(sessions));
+  }, [sessions]);
 
-useEffect(() => {
-  localStorage.setItem("savedModules", JSON.stringify(savedModules));
-}, [savedModules]);
+  useEffect(() => {
+    localStorage.setItem("savedModules", JSON.stringify(savedModules));
+  }, [savedModules]);
 
+  // Reset timer when focus duration changes
+  useLayoutEffect(() => {
+    if (mode !== "focus") return;
+    setIsRunning(false);
+    setTimeLeft(focusDuration * 60);
+    hasLoggedRef.current = false;
+  }, [focusDuration]);
+
+  // Reset timer when break duration changes
+  useLayoutEffect(() => {
+    if (mode !== "break") return;
+    setIsRunning(false);
+    setTimeLeft(breakDuration * 60);
+    hasLoggedRef.current = false;
+  }, [breakDuration]);
+
+  // Stats
   const totalFocusSessions = sessions.length;
-  const totalFocusMinutes = sessions.reduce((sum, session) => sum + session.duration, 0);
+  const totalFocusMinutes = sessions.reduce((sum, s) => sum + s.duration, 0);
 
   const tagCounts = {};
-
   sessions.forEach((session) => {
     const sessionTag = session.tag || "untitled";
     tagCounts[sessionTag] = (tagCounts[sessionTag] || 0) + 1;
   });
 
   let mostUsedTag = "None yet";
-let highestCount = 0;
-let topTags = [];
+  let highestCount = 0;
+  let topTags = [];
 
-for (const sessionTag in tagCounts) {
-  if (tagCounts[sessionTag] > highestCount) {
-    highestCount = tagCounts[sessionTag];
-    topTags = [sessionTag];
-  } else if (tagCounts[sessionTag] === highestCount) {
-    topTags.push(sessionTag);
+  for (const sessionTag in tagCounts) {
+    if (tagCounts[sessionTag] > highestCount) {
+      highestCount = tagCounts[sessionTag];
+      topTags = [sessionTag];
+    } else if (tagCounts[sessionTag] === highestCount) {
+      topTags.push(sessionTag);
+    }
   }
-}
 
-if (topTags.length === 1) {
-  mostUsedTag = topTags[0];
-} else if (topTags.length > 1) {
-  mostUsedTag = "Multiple";
-}
+  if (topTags.length === 1) {
+    mostUsedTag = topTags[0];
+  } else if (topTags.length > 1) {
+    mostUsedTag = "Multiple";
+  }
 
+  // Handlers
   function addModuleTag() {
     const normalisedModule = moduleInput.trim();
-
     if (!normalisedModule) return;
 
     const alreadyExists = savedModules.some(
-      (module) => module.toLowerCase() === normalisedModule.toLowerCase()
+      (m) => m.toLowerCase() === normalisedModule.toLowerCase()
     );
 
     if (alreadyExists) {
@@ -150,11 +167,26 @@ if (topTags.length === 1) {
     setModuleInput("");
   }
 
+  function removeModule(moduleToRemove) {
+    setSavedModules((prev) => prev.filter((m) => m !== moduleToRemove));
+    if (selectedModule === moduleToRemove) setSelectedModule("");
+  }
+
+  function updateFocusDuration(newDuration) {
+    setFocusDuration(newDuration);
+  }
+
+  function updateBreakDuration(newDuration) {
+    setBreakDuration(newDuration);
+  }
+
   if (view === "insights") {
     return (
       <div className="app-shell">
         <div className="back-row">
-          <button className="secondary-button" onClick={() => setView("timer")}>← Back to Timer</button>
+          <button className="secondary-button" onClick={() => setView("timer")}>
+            ← Back to Timer
+          </button>
         </div>
         <Insights
           sessions={sessions}
@@ -180,16 +212,19 @@ if (topTags.length === 1) {
               aspectRatio: "1",
               margin: "8px auto 28px",
               display: "grid",
-              placeItems: "center"
+              placeItems: "center",
             }}
           >
             <svg
               className="timer-ring"
               viewBox="0 0 240 240"
-              width="320"
-              height="320"
               aria-hidden="true"
-              style={{ width: "100%", height: "100%", transform: "rotate(-90deg)", overflow: "visible" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                transform: "rotate(-90deg)",
+                overflow: "visible",
+              }}
             >
               <defs>
                 <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -219,7 +254,7 @@ if (topTags.length === 1) {
                   filter: "drop-shadow(0 0 10px rgba(197, 166, 255, 0.5))",
                   transition: "stroke-dashoffset 0.5s linear",
                   strokeDasharray: circleCircumference,
-                  strokeDashoffset
+                  strokeDashoffset,
                 }}
               />
             </svg>
@@ -234,14 +269,17 @@ if (topTags.length === 1) {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "10px",
-                textAlign: "center"
+                textAlign: "center",
               }}
             >
               <div className="timer-display">
                 {Math.floor(timeLeft / 60)}:
                 {(timeLeft % 60).toString().padStart(2, "0")}
               </div>
-              <h2 className="mode-label timer-mode-inside" style={{ margin: 0, fontSize: "1rem" }}>
+              <h2
+                className="mode-label timer-mode-inside"
+                style={{ margin: 0, fontSize: "1rem" }}
+              >
                 {mode === "focus" ? "Focus" : "Break"}
               </h2>
             </div>
@@ -270,6 +308,7 @@ if (topTags.length === 1) {
                 setIsRunning(false);
                 setMode("focus");
                 setTimeLeft(focusDuration * 60);
+                hasLoggedRef.current = false;
               }}
             >
               Reset
@@ -296,8 +335,20 @@ if (topTags.length === 1) {
                 max="120"
                 step="5"
                 value={focusDuration}
-                onChange={(e) => setFocusDuration(Number(e.target.value))}
+                onChange={(e) => updateFocusDuration(Number(e.target.value))}
               />
+              <div className="preset-row">
+                {[25, 45, 60].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={`preset-button ${focusDuration === preset ? "preset-active" : ""}`}
+                    onClick={() => updateFocusDuration(preset)}
+                  >
+                    {preset}m
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="slider-card">
@@ -312,8 +363,20 @@ if (topTags.length === 1) {
                 max="30"
                 step="5"
                 value={breakDuration}
-                onChange={(e) => setBreakDuration(Number(e.target.value))}
+                onChange={(e) => updateBreakDuration(Number(e.target.value))}
               />
+              <div className="preset-row">
+                {[5, 10, 15].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={`preset-button ${breakDuration === preset ? "preset-active" : ""}`}
+                    onClick={() => updateBreakDuration(preset)}
+                  >
+                    {preset}m
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -331,6 +394,24 @@ if (topTags.length === 1) {
                   Add Module
                 </button>
               </div>
+
+              {savedModules.length > 0 && (
+                <div className="module-list">
+                  {savedModules.map((module) => (
+                    <div key={module} className="module-pill">
+                      <span>{module}</span>
+                      <button
+                        type="button"
+                        className="module-delete"
+                        onClick={() => removeModule(module)}
+                        aria-label={`Remove ${module}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
