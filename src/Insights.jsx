@@ -42,9 +42,11 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
         labels: Object.keys(tagMinutes),
         datasets: [
           {
-            label: "Minutes per Tag",
+            label: "Focus minutes by tag",
             data: Object.values(tagMinutes),
-            backgroundColor: "rgba(147, 197, 253, 0.6)",
+            backgroundColor: "rgba(197, 166, 255, 0.72)",
+            borderColor: "rgba(255, 255, 255, 0.35)",
+            borderWidth: 1,
             borderRadius: 8
           }
         ]
@@ -55,13 +57,28 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
         maintainAspectRatio: false,
         aspectRatio: 1.5,
         scales: {
+          x: {
+            ticks: { color: "#c9bddf" },
+            grid: { color: "rgba(255, 255, 255, 0.06)" }
+          },
           y: {
             beginAtZero: true,
-            ticks: { stepSize: 1 }
+            ticks: {
+              stepSize: 1,
+              color: "#c9bddf"
+            },
+            grid: { color: "rgba(255, 255, 255, 0.08)" }
           }
         },
         plugins: {
-          legend: { display: false }
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "rgba(27, 20, 51, 0.95)",
+            titleColor: "#fff8ef",
+            bodyColor: "#e9e2ff",
+            borderColor: "rgba(203, 186, 255, 0.2)",
+            borderWidth: 1
+          }
         }
       }
     });
@@ -74,12 +91,14 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
           {
             data: Object.values(tagMinutes),
             backgroundColor: [
-              "rgba(147, 197, 253, 0.7)",
-              "rgba(196, 181, 253, 0.7)",
-              "rgba(251, 191, 36, 0.7)",
-              "rgba(244, 114, 182, 0.7)",
-              "rgba(52, 211, 153, 0.7)"
-            ]
+              "rgba(197, 166, 255, 0.82)",
+              "rgba(255, 255, 255, 0.72)",
+              "rgba(244, 114, 182, 0.68)",
+              "rgba(147, 197, 253, 0.66)",
+              "rgba(203, 186, 255, 0.7)"
+            ],
+            borderColor: "rgba(18, 15, 36, 0.9)",
+            borderWidth: 2
           }
         ]
       },
@@ -89,7 +108,21 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
         maintainAspectRatio: false,
         aspectRatio: 1,
         plugins: {
-          legend: { position: "bottom" }
+          legend: {
+            position: "bottom",
+            labels: {
+              color: "#c9bddf",
+              boxWidth: 12,
+              padding: 14
+            }
+          },
+          tooltip: {
+            backgroundColor: "rgba(27, 20, 51, 0.95)",
+            titleColor: "#fff8ef",
+            bodyColor: "#e9e2ff",
+            borderColor: "rgba(203, 186, 255, 0.2)",
+            borderWidth: 1
+          }
         }
       }
     });
@@ -110,7 +143,10 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
   return (
     <div className="app-shell">
       <div className="page-card insights-layout">
-        <h1>Aurora Insights</h1>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <h1>Aurora Insights</h1>
+          <p className="muted-text">Track your focus habits and understand where your time goes</p>
+        </div>
 
         <div className="insights-card">
           <h3 className="section-title">Summary</h3>
@@ -131,47 +167,31 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
         </div>
 
         <div className="insights-card">
-          <h3 className="section-title">Minutes per tag</h3>
-          <ul className="list-reset">
-            {Object.entries(tagMinutes).map(([tag, minutes]) => (
-              <li key={tag}>
-                {tag}: {minutes} min
-              </li>
-            ))}
-          </ul>
-        </div>
+          <h3 className="section-title">Top Focus Areas</h3>
 
-        <div className="insights-card">
-          <h3 className="section-title">Top Tags</h3>
-          <ul className="list-reset">
-            {sortedTags.map(([tag, minutes]) => (
-              <li key={tag}>
-                {tag}: {minutes} min
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="insights-card">
-          <h3 className="section-title">Focus Distribution</h3>
-          <ul className="list-reset">
-            {tagPercentages.map(({ tag, percentage }) => (
-              <li key={tag}>
-                {tag}: {percentage}%
-              </li>
-            ))}
-          </ul>
+          <div className="stats-grid">
+            {sortedTags.map(([tag, minutes]) => {
+              const percentage = ((minutes / totalMinutes) * 100).toFixed(1);
+              return (
+                <div key={tag} className="stat-pill">
+                  <span className="muted-text">{tag}</span>
+                  <strong>{minutes} min</strong>
+                  <span className="muted-text">{percentage}%</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="chart-card chart-wrap pie">
-          <h3 className="section-title">Focus Pie Chart</h3>
+          <h3 className="section-title">Focus Distribution by Tag</h3>
           <div className="chart-frame-sm">
             <canvas ref={pieChartRef}></canvas>
           </div>
         </div>
 
         <div className="chart-card chart-wrap">
-          <h3 className="section-title">Focus Chart</h3>
+          <h3 className="section-title">Focus Minutes per Tag</h3>
           <div className="chart-frame-md">
             <canvas ref={chartRef}></canvas>
           </div>
@@ -179,14 +199,23 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
 
         <div className="history-card">
           <h3 className="section-title">Session History</h3>
-          <ul className="list-reset">
+          <p className="muted-text">Your recent focus sessions</p>
+
+          <div className="history-list">
             {sessions.map((session, index) => (
-              <li key={index}>
-                {session.type.toUpperCase()} ({session.tag || "untitled"}) - {session.duration} min - completed at{" "}
-                {new Date(session.completedAt).toLocaleTimeString()}
-              </li>
+              <div key={index} className="history-item">
+                <div>
+                  <strong>{session.tag || "untitled"}</strong>
+                  <div className="muted-text">
+                    {session.type.toUpperCase()} • {session.duration} min
+                  </div>
+                </div>
+                <div className="muted-text">
+                  {new Date(session.completedAt).toLocaleTimeString()}
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       </div>
     </div>
