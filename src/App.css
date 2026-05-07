@@ -507,3 +507,34 @@
 .history-item p {
   margin: 4px 0 0;
 }
+
+/* INSIGHTS FILTER BUTTONS */
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.filter-button {
+  width: auto;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-soft);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.filter-button:hover:not(:disabled) {
+  background: rgba(197, 166, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.filter-active {
+  background: rgba(197, 166, 255, 0.32);
+  color: var(--heading);
+  border-color: rgba(197, 166, 255, 0.5);
+}

@@ -1,10 +1,66 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Chart from "chart.js/auto";
 
 function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag }) {
+  const [timeFilter, setTimeFilter] = useState("all");
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+
+  const filteredSessions = sessions.filter((session) => {
+    const completedDate = new Date(session.completedAt);
+
+    if (timeFilter === "today") {
+      return completedDate >= startOfToday;
+    }
+
+    if (timeFilter === "week") {
+      return completedDate >= startOfWeek;
+    }
+
+    return true;
+  });
+
+  const filteredTotalFocusSessions = filteredSessions.length;
+  const filteredTotalFocusMinutes = filteredSessions.reduce(
+    (sum, session) => sum + session.duration,
+    0
+  );
+
+  const filteredTagCounts = {};
+
+  filteredSessions.forEach((session) => {
+    const sessionTag = session.tag || "untitled";
+
+    if (sessionTag === "untitled") return;
+
+    filteredTagCounts[sessionTag] =
+      (filteredTagCounts[sessionTag] || 0) + session.duration;
+  });
+
+  let filteredMostUsedTag = "None yet";
+  let filteredHighestMinutes = 0;
+  let filteredTopTags = [];
+
+  for (const sessionTag in filteredTagCounts) {
+    if (filteredTagCounts[sessionTag] > filteredHighestMinutes) {
+      filteredHighestMinutes = filteredTagCounts[sessionTag];
+      filteredTopTags = [sessionTag];
+    } else if (filteredTagCounts[sessionTag] === filteredHighestMinutes) {
+      filteredTopTags.push(sessionTag);
+    }
+  }
+
+  if (filteredTopTags.length === 1) {
+    filteredMostUsedTag = filteredTopTags[0];
+  } else if (filteredTopTags.length > 1) {
+    filteredMostUsedTag = "Multiple";
+  }
   const tagMinutes = {};
 
-  sessions.forEach((session) => {
+  filteredSessions.forEach((session) => {
     const sessionTag = session.tag || "untitled";
     tagMinutes[sessionTag] = (tagMinutes[sessionTag] || 0) + session.duration;
   });
@@ -13,7 +69,7 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
 
-  const totalMinutes = totalFocusMinutes || 1;
+  const totalMinutes = filteredTotalFocusMinutes || 1;
 
   const tagPercentages = Object.entries(tagMinutes).map(([tag, minutes]) => ({
     tag,
@@ -138,7 +194,7 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
         pieChartInstanceRef.current = null;
       }
     };
-  }, [sessions]);
+  }, [filteredSessions, tagMinutes]);
 
   return (
     <div className="app-shell">
@@ -146,6 +202,30 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
         <div style={{ gridColumn: "1 / -1" }}>
           <h1>Aurora Insights</h1>
           <p className="muted-text">Track your focus habits and understand where your time goes</p>
+
+          <div className="filter-row">
+            <button
+              type="button"
+              className={`filter-button ${timeFilter === "today" ? "filter-active" : ""}`}
+              onClick={() => setTimeFilter("today")}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              className={`filter-button ${timeFilter === "week" ? "filter-active" : ""}`}
+              onClick={() => setTimeFilter("week")}
+            >
+              This Week
+            </button>
+            <button
+              type="button"
+              className={`filter-button ${timeFilter === "all" ? "filter-active" : ""}`}
+              onClick={() => setTimeFilter("all")}
+            >
+              All Time
+            </button>
+          </div>
         </div>
 
         <div className="insights-card">
@@ -153,15 +233,15 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
           <div className="stats-grid">
             <div className="stat-pill">
               <span className="muted-text">Focus sessions</span>
-              <strong>{totalFocusSessions}</strong>
+              <strong>{filteredTotalFocusSessions}</strong>
             </div>
             <div className="stat-pill">
               <span className="muted-text">Focus minutes</span>
-              <strong>{totalFocusMinutes}</strong>
+              <strong>{filteredTotalFocusMinutes}</strong>
             </div>
             <div className="stat-pill">
               <span className="muted-text">Most used tag</span>
-              <strong>{mostUsedTag}</strong>
+              <strong>{filteredMostUsedTag}</strong>
             </div>
           </div>
         </div>
@@ -202,7 +282,7 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
           <p className="muted-text">Your recent focus sessions</p>
 
           <div className="history-list">
-            {[...sessions].reverse().map((session, index) => (
+            {[...filteredSessions].reverse().map((session, index) => (
               <div key={index} className="history-item">
                 <div>
                   <strong>{session.tag || "untitled"}</strong>
