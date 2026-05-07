@@ -44,8 +44,8 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
           {
             label: "Focus minutes by tag",
             data: Object.values(tagMinutes),
-            backgroundColor: "rgba(197, 166, 255, 0.72)",
-            borderColor: "rgba(255, 255, 255, 0.35)",
+            backgroundColor: "rgba(207, 184, 255, 0.78)",
+            borderColor: "rgba(255, 248, 239, 0.38)",
             borderWidth: 1,
             borderRadius: 8
           }
@@ -91,13 +91,13 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
           {
             data: Object.values(tagMinutes),
             backgroundColor: [
-              "rgba(197, 166, 255, 0.82)",
-              "rgba(255, 255, 255, 0.72)",
-              "rgba(244, 114, 182, 0.68)",
-              "rgba(147, 197, 253, 0.66)",
-              "rgba(203, 186, 255, 0.7)"
+              "rgba(207, 184, 255, 0.86)",
+              "rgba(255, 248, 239, 0.74)",
+              "rgba(236, 180, 213, 0.72)",
+              "rgba(177, 205, 255, 0.68)",
+              "rgba(170, 145, 218, 0.78)"
             ],
-            borderColor: "rgba(18, 15, 36, 0.9)",
+            borderColor: "rgba(18, 15, 36, 0.92)",
             borderWidth: 2
           }
         ]
