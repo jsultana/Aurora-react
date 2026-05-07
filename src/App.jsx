@@ -125,9 +125,13 @@ function App() {
   const totalFocusMinutes = sessions.reduce((sum, s) => sum + s.duration, 0);
 
   const tagCounts = {};
+
   sessions.forEach((session) => {
     const sessionTag = session.tag || "untitled";
-    tagCounts[sessionTag] = (tagCounts[sessionTag] || 0) + 1;
+
+    if (sessionTag === "untitled") return;
+
+    tagCounts[sessionTag] = (tagCounts[sessionTag] || 0) + session.duration;
   });
 
   let mostUsedTag = "None yet";

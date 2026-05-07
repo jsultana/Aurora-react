@@ -202,7 +202,7 @@ function Insights({ sessions, totalFocusSessions, totalFocusMinutes, mostUsedTag
           <p className="muted-text">Your recent focus sessions</p>
 
           <div className="history-list">
-            {sessions.map((session, index) => (
+            {[...sessions].reverse().map((session, index) => (
               <div key={index} className="history-item">
                 <div>
                   <strong>{session.tag || "untitled"}</strong>
