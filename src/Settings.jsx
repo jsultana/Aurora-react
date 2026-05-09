@@ -8,6 +8,8 @@ function Settings({
   removeModule,
   tag,
   setTag,
+  notificationsEnabled,
+  setNotificationsEnabled,
   applySettings
 }) {
   return (
@@ -22,6 +24,34 @@ function Settings({
           <h3 className="section-title">Session Organisation</h3>
 
           <div className="settings-stack compact-settings-stack">
+            <div className="settings-toggle-row">
+              <div>
+                <h4>Notifications</h4>
+
+                <p className="muted-text">
+                  Get notified when focus or break sessions end
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className={`preset-button ${notificationsEnabled ? "preset-active" : ""}`}
+                onClick={async () => {
+                  if (!("Notification" in window)) return;
+
+                  if (Notification.permission !== "granted") {
+                    const permission = await Notification.requestPermission();
+
+                    if (permission !== "granted") return;
+                  }
+
+                  setNotificationsEnabled((prev) => !prev);
+                }}
+              >
+                {notificationsEnabled ? "On" : "Off"}
+              </button>
+            </div>
+
             <div>
               <h4>Saved Modules</h4>
 

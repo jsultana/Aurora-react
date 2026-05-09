@@ -33,6 +33,9 @@ function App() {
 
   const [view, setView] = useState("timer");
   const [showSessionSetup, setShowSessionSetup] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+  return JSON.parse(localStorage.getItem("notificationsEnabled")) ?? false;
+  });
 
   const hasLoggedRef = useRef(false);
 
@@ -81,11 +84,25 @@ function App() {
         hasLoggedRef.current = true;
       }
 
-      setMode("break");
-      setTimeLeft(breakDuration * 60);
+      sendNotification(
+
+  "Focus session complete",
+
+  "Time for a break."
+
+);
+
+setMode("break");
+
+setTimeLeft(breakDuration * 60);
     } else {
-      setMode("focus");
-      setTimeLeft(focusDuration * 60);
+      sendNotification(
+  "Break finished",
+  "Ready to focus again?"
+);
+
+setMode("focus");
+setTimeLeft(focusDuration * 60);
     }
   }, [timeLeft, mode, focusDuration, breakDuration, selectedModule, tag]);
 
@@ -105,6 +122,13 @@ function App() {
   useEffect(() => {
     localStorage.setItem("savedModules", JSON.stringify(savedModules));
   }, [savedModules]);
+
+  useEffect(() => {
+  localStorage.setItem(
+    "notificationsEnabled",
+    JSON.stringify(notificationsEnabled)
+  );
+}, [notificationsEnabled]);
 
   // Reset timer when focus duration changes
   useLayoutEffect(() => {
@@ -154,6 +178,17 @@ function App() {
   } else if (topTags.length > 1) {
     mostUsedTag = "Multiple";
   }
+
+function sendNotification(title, body) {
+  if (!notificationsEnabled) return;
+  if (!("Notification" in window)) return;
+
+  if (Notification.permission === "granted") {
+    new Notification(title, {
+      body,
+    });
+  }
+}
 
   // Handlers
   function addModuleTag() {
