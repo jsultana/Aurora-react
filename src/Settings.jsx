@@ -39,13 +39,16 @@ function Settings({
                 onClick={async () => {
                   if (!("Notification" in window)) return;
 
-                  if (Notification.permission !== "granted") {
-                    const permission = await Notification.requestPermission();
-
-                    if (permission !== "granted") return;
+                  if (notificationsEnabled) {
+                    setNotificationsEnabled(false);
+                    return;
                   }
 
-                  setNotificationsEnabled((prev) => !prev);
+                  const permission = await Notification.requestPermission();
+
+                  if (permission === "granted") {
+                    setNotificationsEnabled(true);
+                  }
                 }}
               >
                 {notificationsEnabled ? "On" : "Off"}
