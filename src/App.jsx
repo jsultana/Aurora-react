@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import Insights from "./Insights";
 import "./App.css";
+import Settings from "./Settings";
 
 function App() {
   const [focusDuration, setFocusDuration] = useState(() => {
@@ -31,6 +32,7 @@ function App() {
   const [selectedModule, setSelectedModule] = useState("");
 
   const [view, setView] = useState("timer");
+  const [showSessionSetup, setShowSessionSetup] = useState(false);
 
   const hasLoggedRef = useRef(false);
 
@@ -202,6 +204,38 @@ function App() {
     );
   }
 
+  if (view === "settings") {
+    return (
+      <div className="app-shell">
+        <div className="back-row">
+          <button className="secondary-button" onClick={() => setView("timer")}>
+            ← Back to Timer
+          </button>
+        </div>
+        <Settings
+          focusDuration={focusDuration}
+          breakDuration={breakDuration}
+          updateFocusDuration={updateFocusDuration}
+          updateBreakDuration={updateBreakDuration}
+          moduleInput={moduleInput}
+          setModuleInput={setModuleInput}
+          addModuleTag={addModuleTag}
+          savedModules={savedModules}
+          selectedModule={selectedModule}
+          setSelectedModule={setSelectedModule}
+          removeModule={removeModule}
+          tag={tag}
+          setTag={setTag}
+          applySettings={() => {
+            setIsRunning(false);
+            setMode("focus");
+            setTimeLeft(focusDuration * 60);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <div className="page-card">
@@ -318,145 +352,143 @@ function App() {
               Reset
             </button>
             <button className="secondary-button" onClick={() => setView("insights")}>
-              📊 View Insights
+               View Insights
+            </button>
+            <button className="secondary-button" onClick={() => setView("settings")}>
+              Settings
             </button>
           </div>
-        </div>
 
-        <div className="settings-card">
-          <h3 className="section-title">Settings</h3>
+          <div className="session-setup-card compact-session-setup">
+            <div className="session-summary-row">
+              <div>
+                <h3 className="section-title">Current session</h3>
+                <div className="session-pill-wrap">
+                  {[selectedModule, tag.trim()].filter(Boolean).length > 0 ? (
+                    <>
+                      {selectedModule && (
+                        <span className="session-pill">
+                          {selectedModule}
+                        </span>
+                      )}
 
-          <div className="slider-grid">
-            <div className="slider-card">
-              <div className="slider-label-row">
-                <span>Focus duration</span>
-                <strong>{focusDuration} min</strong>
+                      {tag.trim() && (
+                        <span className="session-pill secondary">
+                          {tag.trim()}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <p className="muted-text">
+                      Choose a module or focus intention
+                    </p>
+                  )}
+                </div>
               </div>
-              <input
-                className="duration-slider"
-                type="range"
-                min="5"
-                max="120"
-                step="5"
-                value={focusDuration}
-                onChange={(e) => updateFocusDuration(Number(e.target.value))}
-              />
-              <div className="preset-row">
-                {[25, 45, 60].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    className={`preset-button ${focusDuration === preset ? "preset-active" : ""}`}
-                    onClick={() => updateFocusDuration(preset)}
-                  >
-                    {preset}m
-                  </button>
-                ))}
-              </div>
+
+              <button
+                type="button"
+                className="secondary-button session-toggle-button"
+                onClick={() => setShowSessionSetup((prev) => !prev)}
+              >
+                {showSessionSetup ? "Done" : "Edit"}
+              </button>
             </div>
 
-            <div className="slider-card">
-              <div className="slider-label-row">
-                <span>Break duration</span>
-                <strong>{breakDuration} min</strong>
-              </div>
-              <input
-                className="duration-slider"
-                type="range"
-                min="5"
-                max="30"
-                step="5"
-                value={breakDuration}
-                onChange={(e) => updateBreakDuration(Number(e.target.value))}
-              />
-              <div className="preset-row">
-                {[5, 10, 15].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    className={`preset-button ${breakDuration === preset ? "preset-active" : ""}`}
-                    onClick={() => updateBreakDuration(preset)}
+            {showSessionSetup && (
+              <div className="session-setup-grid">
+                <label>
+                  Module
+                  <select
+                    value={selectedModule}
+                    onChange={(e) => {
+                      setSelectedModule(e.target.value);
+                    }}
                   >
-                    {preset}m
-                  </button>
-                ))}
+                    <option value="">None</option>
+                    {savedModules.map((module) => (
+                      <option key={module} value={module}>
+                        {module}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Optional tag
+                  <input
+                    type="text"
+                    value={tag}
+                    onChange={(e) => setTag(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        setShowSessionSetup(false);
+                      }
+                    }}
+                    placeholder="e.g. lecture, essay, deep work"
+                  />
+                </label>
               </div>
-            </div>
+            )}
           </div>
 
-          <div className="settings-stack compact-settings-stack">
-            <div>
-              <h4>Saved Modules</h4>
-              <div className="inline-row">
+          <div className="quick-timer-settings">
+            <div className="slider-grid">
+              <div className="slider-card">
+                <div className="slider-label-row">
+                  <span>Focus duration</span>
+                  <strong>{focusDuration} min</strong>
+                </div>
                 <input
-                  type="text"
-                  value={moduleInput}
-                  onChange={(e) => setModuleInput(e.target.value)}
-                  placeholder="Add a module e.g. FYP"
+                  className="duration-slider"
+                  type="range"
+                  min="5"
+                  max="120"
+                  step="5"
+                  value={focusDuration}
+                  onChange={(e) => updateFocusDuration(Number(e.target.value))}
                 />
-                <button type="button" onClick={addModuleTag}>
-                  Add Module
-                </button>
-              </div>
-
-              {savedModules.length > 0 && (
-                <div className="module-list">
-                  {savedModules.map((module) => (
-                    <div key={module} className="module-pill">
-                      <span>{module}</span>
-                      <button
-                        type="button"
-                        className="module-delete"
-                        onClick={() => removeModule(module)}
-                        aria-label={`Remove ${module}`}
-                      >
-                        ×
-                      </button>
-                    </div>
+                <div className="preset-row">
+                  {[25, 45, 60].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className={`preset-button ${focusDuration === preset ? "preset-active" : ""}`}
+                      onClick={() => updateFocusDuration(preset)}
+                    >
+                      {preset}m
+                    </button>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
 
-            <div>
-              <label>
-                Select module:
-                <select
-                  value={selectedModule}
-                  onChange={(e) => setSelectedModule(e.target.value)}
-                >
-                  <option value="">None</option>
-                  {savedModules.map((module) => (
-                    <option key={module} value={module}>
-                      {module}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div>
-              <label>
-                Session tag:
+              <div className="slider-card">
+                <div className="slider-label-row">
+                  <span>Break duration</span>
+                  <strong>{breakDuration} min</strong>
+                </div>
                 <input
-                  type="text"
-                  value={tag}
-                  onChange={(e) => setTag(e.target.value)}
-                  placeholder="Add extra tag e.g. deep work"
+                  className="duration-slider"
+                  type="range"
+                  min="5"
+                  max="30"
+                  step="5"
+                  value={breakDuration}
+                  onChange={(e) => updateBreakDuration(Number(e.target.value))}
                 />
-              </label>
-            </div>
-
-            <div className="button-row" style={{ justifyContent: "flex-start", marginBottom: 0 }}>
-              <button
-                onClick={() => {
-                  setIsRunning(false);
-                  setMode("focus");
-                  setTimeLeft(focusDuration * 60);
-                }}
-              >
-                Apply
-              </button>
+                <div className="preset-row">
+                  {[5, 10, 15].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className={`preset-button ${breakDuration === preset ? "preset-active" : ""}`}
+                      onClick={() => updateBreakDuration(preset)}
+                    >
+                      {preset}m
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
