@@ -36,19 +36,34 @@ function Settings({
               <button
                 type="button"
                 className={`preset-button ${notificationsEnabled ? "preset-active" : ""}`}
-                onClick={async () => {
-                  if (!("Notification" in window)) return;
+                onClick={() => {
+                  if (!("Notification" in window)) {
+                    alert("This browser does not support notifications.");
+                    return;
+                  }
 
                   if (notificationsEnabled) {
                     setNotificationsEnabled(false);
                     return;
                   }
 
-                  const permission = await Notification.requestPermission();
-
-                  if (permission === "granted") {
+                  if (Notification.permission === "granted") {
                     setNotificationsEnabled(true);
+                    return;
                   }
+
+                  if (Notification.permission === "denied") {
+                    alert(
+                      "Notifications are blocked. Please allow notifications for Aurora in your browser settings."
+                    );
+                    return;
+                  }
+
+                  Notification.requestPermission().then((permission) => {
+                    if (permission === "granted") {
+                      setNotificationsEnabled(true);
+                    }
+                  });
                 }}
               >
                 {notificationsEnabled ? "On" : "Off"}
