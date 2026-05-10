@@ -1,9 +1,10 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Insights from "./Insights";
-import "./App.css";
 import Settings from "./Settings";
+import "./App.css";
 
 function App() {
+  // Timer settings
   const [focusDuration, setFocusDuration] = useState(() => {
     return Number(localStorage.getItem("focusDuration")) || 25;
   });
@@ -20,93 +21,75 @@ function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [mode, setMode] = useState("focus");
 
+  // Session data
   const [sessions, setSessions] = useState(() => {
     return JSON.parse(localStorage.getItem("sessions")) || [];
   });
 
   const [tag, setTag] = useState("");
   const [moduleInput, setModuleInput] = useState("");
+  const [selectedModule, setSelectedModule] = useState("");
+
   const [savedModules, setSavedModules] = useState(() => {
     return JSON.parse(localStorage.getItem("savedModules")) || [];
   });
-  const [selectedModule, setSelectedModule] = useState("");
 
+  // UI state
   const [view, setView] = useState("timer");
   const [showSessionSetup, setShowSessionSetup] = useState(false);
+
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
-  return JSON.parse(localStorage.getItem("notificationsEnabled")) ?? false;
+    return JSON.parse(localStorage.getItem("notificationsEnabled")) ?? false;
   });
 
   const hasLoggedRef = useRef(false);
 
+  // Derived timer values
   const activeDuration = (mode === "focus" ? focusDuration : breakDuration) * 60;
   const progress = activeDuration > 0 ? timeLeft / activeDuration : 0;
   const circleCircumference = 2 * Math.PI * 100;
   const strokeDashoffset = circleCircumference - progress * circleCircumference;
+
+  const formattedTime = `${Math.floor(timeLeft / 60)}:${(timeLeft % 60)
+    .toString()
+    .padStart(2, "0")}`;
+
+  const currentSessionParts = [selectedModule, tag.trim()].filter(Boolean);
+  const currentSessionTag = currentSessionParts.join(" - ").toLowerCase() || "untitled";
 
   // Countdown interval
   useEffect(() => {
     if (!isRunning) return;
 
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
+      setTimeLeft((previousTime) => {
+        if (previousTime <= 1) {
           clearInterval(interval);
           setIsRunning(false);
           return 0;
         }
-        return prev - 1;
+
+        return previousTime - 1;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isRunning, mode, focusDuration, breakDuration]);
+  }, [isRunning]);
 
-  // Handle timer reaching zero — log session and switch mode
+  // Handle completed focus/break sessions
   useEffect(() => {
     if (timeLeft !== 0) return;
 
     if (mode === "focus") {
-      if (!hasLoggedRef.current) {
-        setSessions((prevSessions) => [
-          ...prevSessions,
-          {
-            type: "focus",
-            duration: focusDuration,
-            tag:
-              [selectedModule, tag.trim()]
-                .filter(Boolean)
-                .join(" - ")
-                .toLowerCase() || "untitled",
-            completedAt: new Date().toISOString(),
-          },
-        ]);
-        hasLoggedRef.current = true;
-      }
-
-      sendNotification(
-
-  "Focus session complete",
-
-  "Time for a break."
-
-);
-
-setMode("break");
-
-setTimeLeft(breakDuration * 60);
-    } else {
-      sendNotification(
-  "Break finished",
-  "Ready to focus again?"
-);
-
-setMode("focus");
-setTimeLeft(focusDuration * 60);
+      completeFocusSession();
+      switchToBreakMode();
+      return;
     }
-  }, [timeLeft, mode, focusDuration, breakDuration, selectedModule, tag]);
 
-  // Persist settings and sessions
+    switchToFocusMode();
+  }, [timeLeft, mode]);
+
+  // Persist user settings/data
   useEffect(() => {
     localStorage.setItem("focusDuration", focusDuration);
   }, [focusDuration]);
@@ -124,93 +107,117 @@ setTimeLeft(focusDuration * 60);
   }, [savedModules]);
 
   useEffect(() => {
-  localStorage.setItem(
-    "notificationsEnabled",
-    JSON.stringify(notificationsEnabled)
-  );
-}, [notificationsEnabled]);
+    localStorage.setItem(
+      "notificationsEnabled",
+      JSON.stringify(notificationsEnabled)
+    );
+  }, [notificationsEnabled]);
 
   // Reset timer when focus duration changes
   useLayoutEffect(() => {
     if (mode !== "focus") return;
-    setIsRunning(false);
-    setTimeLeft(focusDuration * 60);
-    hasLoggedRef.current = false;
+
+    resetTimer("focus", focusDuration);
   }, [focusDuration]);
 
   // Reset timer when break duration changes
   useLayoutEffect(() => {
     if (mode !== "break") return;
-    setIsRunning(false);
-    setTimeLeft(breakDuration * 60);
-    hasLoggedRef.current = false;
+
+    resetTimer("break", breakDuration);
   }, [breakDuration]);
 
-  // Stats
+  // Insight stats
   const totalFocusSessions = sessions.length;
-  const totalFocusMinutes = sessions.reduce((sum, s) => sum + s.duration, 0);
+  const totalFocusMinutes = sessions.reduce((sum, session) => {
+    return sum + session.duration;
+  }, 0);
 
-  const tagCounts = {};
-
-  sessions.forEach((session) => {
+  const tagCounts = sessions.reduce((counts, session) => {
     const sessionTag = session.tag || "untitled";
 
-    if (sessionTag === "untitled") return;
+    if (sessionTag === "untitled") return counts;
 
-    tagCounts[sessionTag] = (tagCounts[sessionTag] || 0) + session.duration;
-  });
+    return {
+      ...counts,
+      [sessionTag]: (counts[sessionTag] || 0) + session.duration,
+    };
+  }, {});
 
-  let mostUsedTag = "None yet";
-  let highestCount = 0;
-  let topTags = [];
+  const mostUsedTag = getMostUsedTag(tagCounts);
 
-  for (const sessionTag in tagCounts) {
-    if (tagCounts[sessionTag] > highestCount) {
-      highestCount = tagCounts[sessionTag];
-      topTags = [sessionTag];
-    } else if (tagCounts[sessionTag] === highestCount) {
-      topTags.push(sessionTag);
-    }
+  // Timer helpers
+  function resetTimer(nextMode = "focus", duration = focusDuration) {
+    setIsRunning(false);
+    setMode(nextMode);
+    setTimeLeft(duration * 60);
+    hasLoggedRef.current = false;
   }
 
-  if (topTags.length === 1) {
-    mostUsedTag = topTags[0];
-  } else if (topTags.length > 1) {
-    mostUsedTag = "Multiple";
+  function completeFocusSession() {
+    if (hasLoggedRef.current) return;
+
+    setSessions((previousSessions) => [
+      ...previousSessions,
+      {
+        type: "focus",
+        duration: focusDuration,
+        tag: currentSessionTag,
+        completedAt: new Date().toISOString(),
+      },
+    ]);
+
+    hasLoggedRef.current = true;
   }
 
-function sendNotification(title, body) {
-  if (!notificationsEnabled) return;
-  if (!("Notification" in window)) return;
-
-  if (Notification.permission === "granted") {
-    new Notification(title, {
-      body,
-    });
+  function switchToBreakMode() {
+    sendNotification("Focus session complete", "Time for a break.");
+    setMode("break");
+    setTimeLeft(breakDuration * 60);
   }
-}
 
-  // Handlers
+  function switchToFocusMode() {
+    sendNotification("Break finished", "Ready to focus again?");
+    setMode("focus");
+    setTimeLeft(focusDuration * 60);
+    hasLoggedRef.current = false;
+  }
+
+  function sendNotification(title, body) {
+    if (!notificationsEnabled) return;
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+
+    new Notification(title, { body });
+  }
+
+  // Module/tag helpers
   function addModuleTag() {
     const normalisedModule = moduleInput.trim();
     if (!normalisedModule) return;
 
-    const alreadyExists = savedModules.some(
-      (m) => m.toLowerCase() === normalisedModule.toLowerCase()
-    );
+    const alreadyExists = savedModules.some((module) => {
+      return module.toLowerCase() === normalisedModule.toLowerCase();
+    });
 
-    if (alreadyExists) {
-      setModuleInput("");
-      return;
+    if (!alreadyExists) {
+      setSavedModules((previousModules) => [
+        ...previousModules,
+        normalisedModule,
+      ]);
     }
 
-    setSavedModules([...savedModules, normalisedModule]);
     setModuleInput("");
   }
 
   function removeModule(moduleToRemove) {
-    setSavedModules((prev) => prev.filter((m) => m !== moduleToRemove));
-    if (selectedModule === moduleToRemove) setSelectedModule("");
+    setSavedModules((previousModules) => {
+      return previousModules.filter((module) => module !== moduleToRemove);
+    });
+
+    if (selectedModule === moduleToRemove) {
+      setSelectedModule("");
+    }
   }
 
   function updateFocusDuration(newDuration) {
@@ -221,6 +228,20 @@ function sendNotification(title, body) {
     setBreakDuration(newDuration);
   }
 
+  function getMostUsedTag(counts) {
+    const entries = Object.entries(counts);
+
+    if (entries.length === 0) return "None yet";
+
+    const highestCount = Math.max(...entries.map(([, count]) => count));
+    const topTags = entries
+      .filter(([, count]) => count === highestCount)
+      .map(([sessionTag]) => sessionTag);
+
+    return topTags.length === 1 ? topTags[0] : "Multiple";
+  }
+
+  // Page views
   if (view === "insights") {
     return (
       <div className="app-shell">
@@ -229,6 +250,7 @@ function sendNotification(title, body) {
             ← Back to Timer
           </button>
         </div>
+
         <Insights
           sessions={sessions}
           totalFocusSessions={totalFocusSessions}
@@ -247,6 +269,7 @@ function sendNotification(title, body) {
             ← Back to Timer
           </button>
         </div>
+
         <Settings
           focusDuration={focusDuration}
           breakDuration={breakDuration}
@@ -261,11 +284,9 @@ function sendNotification(title, body) {
           removeModule={removeModule}
           tag={tag}
           setTag={setTag}
-          applySettings={() => {
-            setIsRunning(false);
-            setMode("focus");
-            setTimeLeft(focusDuration * 60);
-          }}
+          notificationsEnabled={notificationsEnabled}
+          setNotificationsEnabled={setNotificationsEnabled}
+          applySettings={() => resetTimer("focus", focusDuration)}
         />
       </div>
     );
@@ -300,11 +321,18 @@ function sendNotification(title, body) {
               }}
             >
               <defs>
-                <linearGradient id="timerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient
+                  id="timerGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#c5a6ff" />
                   <stop offset="100%" stopColor="#ffffff" />
                 </linearGradient>
               </defs>
+
               <circle
                 className="timer-ring-track"
                 cx="120"
@@ -314,6 +342,7 @@ function sendNotification(title, body) {
                 stroke="rgba(255, 255, 255, 0.1)"
                 strokeWidth="10"
               />
+
               <circle
                 className="timer-ring-progress"
                 cx="120"
@@ -345,10 +374,8 @@ function sendNotification(title, body) {
                 textAlign: "center",
               }}
             >
-              <div className="timer-display">
-                {Math.floor(timeLeft / 60)}:
-                {(timeLeft % 60).toString().padStart(2, "0")}
-              </div>
+              <div className="timer-display">{formattedTime}</div>
+
               <h2
                 className="mode-label timer-mode-inside"
                 style={{ margin: 0, fontSize: "1rem" }}
@@ -368,6 +395,7 @@ function sendNotification(title, body) {
             >
               Start
             </button>
+
             <button
               className="secondary-button"
               disabled={!isRunning}
@@ -375,21 +403,25 @@ function sendNotification(title, body) {
             >
               Pause
             </button>
+
             <button
               className="secondary-button"
-              onClick={() => {
-                setIsRunning(false);
-                setMode("focus");
-                setTimeLeft(focusDuration * 60);
-                hasLoggedRef.current = false;
-              }}
+              onClick={() => resetTimer("focus", focusDuration)}
             >
               Reset
             </button>
-            <button className="secondary-button" onClick={() => setView("insights")}>
-               View Insights
+
+            <button
+              className="secondary-button"
+              onClick={() => setView("insights")}
+            >
+              View Insights
             </button>
-            <button className="secondary-button" onClick={() => setView("settings")}>
+
+            <button
+              className="secondary-button"
+              onClick={() => setView("settings")}
+            >
               Settings
             </button>
           </div>
@@ -398,13 +430,12 @@ function sendNotification(title, body) {
             <div className="session-summary-row">
               <div>
                 <h3 className="section-title">Current session</h3>
+
                 <div className="session-pill-wrap">
-                  {[selectedModule, tag.trim()].filter(Boolean).length > 0 ? (
+                  {currentSessionParts.length > 0 ? (
                     <>
                       {selectedModule && (
-                        <span className="session-pill">
-                          {selectedModule}
-                        </span>
+                        <span className="session-pill">{selectedModule}</span>
                       )}
 
                       {tag.trim() && (
@@ -424,7 +455,7 @@ function sendNotification(title, body) {
               <button
                 type="button"
                 className="secondary-button session-toggle-button"
-                onClick={() => setShowSessionSetup((prev) => !prev)}
+                onClick={() => setShowSessionSetup((previousValue) => !previousValue)}
               >
                 {showSessionSetup ? "Done" : "Edit"}
               </button>
@@ -436,9 +467,7 @@ function sendNotification(title, body) {
                   Module
                   <select
                     value={selectedModule}
-                    onChange={(e) => {
-                      setSelectedModule(e.target.value);
-                    }}
+                    onChange={(event) => setSelectedModule(event.target.value)}
                   >
                     <option value="">None</option>
                     {savedModules.map((module) => (
@@ -454,9 +483,9 @@ function sendNotification(title, body) {
                   <input
                     type="text"
                     value={tag}
-                    onChange={(e) => setTag(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                    onChange={(event) => setTag(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
                         setShowSessionSetup(false);
                       }
                     }}
@@ -474,6 +503,7 @@ function sendNotification(title, body) {
                   <span>Focus duration</span>
                   <strong>{focusDuration} min</strong>
                 </div>
+
                 <input
                   className="duration-slider"
                   type="range"
@@ -481,14 +511,19 @@ function sendNotification(title, body) {
                   max="120"
                   step="5"
                   value={focusDuration}
-                  onChange={(e) => updateFocusDuration(Number(e.target.value))}
+                  onChange={(event) => {
+                    updateFocusDuration(Number(event.target.value));
+                  }}
                 />
+
                 <div className="preset-row">
                   {[25, 45, 60].map((preset) => (
                     <button
                       key={preset}
                       type="button"
-                      className={`preset-button ${focusDuration === preset ? "preset-active" : ""}`}
+                      className={`preset-button ${
+                        focusDuration === preset ? "preset-active" : ""
+                      }`}
                       onClick={() => updateFocusDuration(preset)}
                     >
                       {preset}m
@@ -502,6 +537,7 @@ function sendNotification(title, body) {
                   <span>Break duration</span>
                   <strong>{breakDuration} min</strong>
                 </div>
+
                 <input
                   className="duration-slider"
                   type="range"
@@ -509,14 +545,19 @@ function sendNotification(title, body) {
                   max="30"
                   step="5"
                   value={breakDuration}
-                  onChange={(e) => updateBreakDuration(Number(e.target.value))}
+                  onChange={(event) => {
+                    updateBreakDuration(Number(event.target.value));
+                  }}
                 />
+
                 <div className="preset-row">
                   {[5, 10, 15].map((preset) => (
                     <button
                       key={preset}
                       type="button"
-                      className={`preset-button ${breakDuration === preset ? "preset-active" : ""}`}
+                      className={`preset-button ${
+                        breakDuration === preset ? "preset-active" : ""
+                      }`}
                       onClick={() => updateBreakDuration(preset)}
                     >
                       {preset}m
