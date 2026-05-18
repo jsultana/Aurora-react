@@ -244,6 +244,45 @@ canvas {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after {
+    animation: none;
+    transition: none;
+  }
+
+  .timer-ring-progress {
+    animation: none;
+    transition: none;
+  }
+
+  button {
+    transition: none;
+  }
+
+  input,
+  select {
+    transition: none;
+  }
+}
+
+.reduce-motion body::before,
+.reduce-motion body::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.reduce-motion .timer-ring-progress {
+  animation: none !important;
+  transition: none !important;
+}
+
+.reduce-motion button,
+.reduce-motion input,
+.reduce-motion select {
+  transition: none !important;
+}
+
 @keyframes auroraStars {
   0% {
     opacity: 0.72;

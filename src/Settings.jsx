@@ -10,8 +10,32 @@ function Settings({
   setTag,
   notificationsEnabled,
   setNotificationsEnabled,
+  reduceMotion,
+  setReduceMotion,
+  sessions,
+  setSessions,
   applySettings
 }) {
+  function exportSessions() {
+    const data = JSON.stringify(sessions, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `aurora-sessions-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function clearAllData() {
+    if (!window.confirm("This will permanently delete all your session data. Are you sure?")) {
+      return;
+    }
+
+    setSessions([]);
+    localStorage.removeItem("sessions");
+  }
+
   return (
     <div className="app-shell">
       <div className="page-card">
@@ -67,6 +91,24 @@ function Settings({
                 }}
               >
                 {notificationsEnabled ? "On" : "Off"}
+              </button>
+            </div>
+
+            <div className="settings-toggle-row">
+              <div>
+                <h4>Reduce Motion</h4>
+
+                <p className="muted-text">
+                  Disable animations for a calmer experience
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className={`preset-button ${reduceMotion ? "preset-active" : ""}`}
+                onClick={() => setReduceMotion((prev) => !prev)}
+              >
+                {reduceMotion ? "On" : "Off"}
               </button>
             </div>
 
@@ -149,6 +191,34 @@ function Settings({
                 Apply
               </button>
             </div>
+          </div>
+        </div>
+
+        <div className="settings-card">
+          <h3 className="section-title">Your Data</h3>
+
+          <p className="muted-text" style={{ marginBottom: "14px" }}>
+            All data is stored locally on your device. Nothing is sent to a server.
+          </p>
+
+          <div className="button-row" style={{ justifyContent: "flex-start" }}>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={exportSessions}
+              disabled={sessions.length === 0}
+            >
+              Export Sessions (JSON)
+            </button>
+
+            <button
+              type="button"
+              className="danger-button"
+              onClick={clearAllData}
+              disabled={sessions.length === 0}
+            >
+              Clear All Data
+            </button>
           </div>
         </div>
       </div>

@@ -42,7 +42,24 @@ function App() {
     return JSON.parse(localStorage.getItem("notificationsEnabled")) ?? false;
   });
 
+  const [reduceMotion, setReduceMotion] = useState(() => {
+    return JSON.parse(localStorage.getItem("reduceMotion")) ?? false;
+  });
+
   const hasLoggedRef = useRef(false);
+
+  const [breakNudge, setBreakNudge] = useState("");
+
+  const nudgeMessages = [
+    "Stand up and stretch for a moment",
+    "Take a sip of water",
+    "Look away from the screen — rest your eyes",
+    "Roll your shoulders and relax your jaw",
+    "Take three slow, deep breaths",
+    "Step away from your desk briefly",
+    "Unclench your hands and shake them out",
+    "You're doing well — rest is part of the process",
+  ];
 
   // Derived timer values
   const activeDuration = (mode === "focus" ? focusDuration : breakDuration) * 60;
@@ -113,6 +130,11 @@ function App() {
     );
   }, [notificationsEnabled]);
 
+  useEffect(() => {
+    localStorage.setItem("reduceMotion", JSON.stringify(reduceMotion));
+    document.documentElement.classList.toggle("reduce-motion", reduceMotion);
+  }, [reduceMotion]);
+
   // Reset timer when focus duration changes
   useLayoutEffect(() => {
     if (mode !== "focus") return;
@@ -171,7 +193,9 @@ function App() {
   }
 
   function switchToBreakMode() {
-    sendNotification("Focus session complete", "Time for a break.");
+    const randomNudge = nudgeMessages[Math.floor(Math.random() * nudgeMessages.length)];
+    setBreakNudge(randomNudge);
+    sendNotification("Focus session complete", randomNudge);
     setMode("break");
     setTimeLeft(breakDuration * 60);
   }
@@ -286,6 +310,10 @@ function App() {
           setTag={setTag}
           notificationsEnabled={notificationsEnabled}
           setNotificationsEnabled={setNotificationsEnabled}
+          reduceMotion={reduceMotion}
+          setReduceMotion={setReduceMotion}
+          sessions={sessions}
+          setSessions={setSessions}
           applySettings={() => resetTimer("focus", focusDuration)}
         />
       </div>
@@ -382,6 +410,10 @@ function App() {
               >
                 {mode === "focus" ? "Focus" : "Break"}
               </h2>
+
+              {mode === "break" && breakNudge && (
+                <p className="break-nudge">{breakNudge}</p>
+              )}
             </div>
           </div>
 
